@@ -5,6 +5,7 @@ from models.graph_net import PCGraphNet
 
 pytestmark = [pytest.mark.shapes]
 
+
 def test_allocate_and_tensor_shapes(small_graph_config, device):
     small_graph_config["device"] = str(device)
     model = PCGraphNet(config=small_graph_config)
@@ -22,6 +23,7 @@ def test_allocate_and_tensor_shapes(small_graph_config, device):
         assert node.x_hat.shape == (B, node.dim)
         assert node.pre_activation_val.shape == (B, node.dim)
         assert node.gain_mod_error.shape == (B, node.dim)
+
 
 def test_projection_shapes_match(small_graph_config, device):
     small_graph_config["device"] = str(device)

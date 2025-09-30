@@ -6,6 +6,7 @@ from models.graph_net import PCGraphNet
 
 pytestmark = [pytest.mark.property]
 
+
 @given(
     batch_size=st.integers(min_value=1, max_value=8),
     dim_a=st.integers(min_value=2, max_value=6),
@@ -15,8 +16,18 @@ def test_allocate_respects_batch_and_dims(batch_size, dim_a, dim_b):
     cfg = {
         "device": "cpu",
         "node_list": [
-            {"name": "a", "dim": dim_a, "type": "linear", "activation": {"type": "sigmoid"}},
-            {"name": "b", "dim": dim_b, "type": "linear", "activation": {"type": "sigmoid"}},
+            {
+                "name": "a",
+                "dim": dim_a,
+                "type": "linear",
+                "activation": {"type": "sigmoid"},
+            },
+            {
+                "name": "b",
+                "dim": dim_b,
+                "type": "linear",
+                "activation": {"type": "sigmoid"},
+            },
         ],
         "edge_list": [
             {"source_name": "a", "target_name": "b", "slot": "in"},

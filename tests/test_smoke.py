@@ -5,9 +5,11 @@ from models.graph_net import PCGraphNet
 
 pytestmark = [pytest.mark.smoke]
 
+
 def test_import_and_instantiate(small_graph_config):
     model = PCGraphNet(config=small_graph_config)
     assert isinstance(model, PCGraphNet)
+
 
 def test_simple_infer_runs(small_graph_config, device):
     small_graph_config["device"] = str(device)
