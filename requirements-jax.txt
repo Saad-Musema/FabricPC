@@ -1,0 +1,33 @@
+# JAX Requirements for FabricPC
+# Install with: pip install -r requirements-jax.txt
+
+# JAX, see installation https://docs.jax.dev/en/latest/installation.html#pip-installation-nvidia-gpu-cuda-installed-via-pip-easier
+jax[cuda12]
+
+# Optimizers
+optax>=0.1.7
+
+# Checkpointing
+orbax-checkpoint>=0.4.0
+
+# Neural network library (optional, for future extensions)
+flax>=0.7.5
+
+# Utilities
+chex>=0.1.84  # Testing utilities for JAX
+jaxtyping>=0.2.23  # Type hints for JAX arrays
+
+# Data loading (same as PyTorch version)
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Visualization (same as PyTorch version)
+plotly>=5.0.0
+numpy>=1.24.0
+tqdm>=4.65.0
+
+# Development tools
+pytest>=7.0.0
+hypothesis>=6.0.0
+black>=23.0.0
+mypy>=1.0.0
