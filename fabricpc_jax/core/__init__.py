@@ -31,7 +31,7 @@ from fabricpc_jax.core.activations import (
 )
 
 # Inference functions
-from fabricpc_jax.core.inference_v2 import (
+from fabricpc_jax.core.inference import (
     compute_node_projection,
     compute_latent_gradients,
     compute_all_projections,

@@ -22,8 +22,8 @@ Example:
 __version__ = "0.2.0"
 
 from fabricpc_jax import core, models, nodes, training
-from fabricpc_jax.core import types, activations, inference_v2, initialization
-from fabricpc_jax.models import graph_net_v2
+from fabricpc_jax.core import types, activations, inference, initialization
+from fabricpc_jax.models import graph_net
 from fabricpc_jax.nodes import base, linear
 from fabricpc_jax.training import train_v2, optimizers, multi_gpu
 
@@ -34,9 +34,9 @@ __all__ = [
     "training",
     "types",
     "activations",
-    "inference_v2",
+    "inference.py",
     "initialization",
-    "graph_net_v2",
+    "graph_net.py",
     "base",
     "linear",
     "train_v2",

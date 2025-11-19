@@ -12,8 +12,8 @@ import optax
 from functools import partial
 
 from fabricpc_jax.core.types import GraphParams, GraphState, GraphStructure
-from fabricpc_jax.core.inference_v2 import run_inference
-from fabricpc_jax.models.graph_net_v2 import initialize_state
+from fabricpc_jax.core.inference import run_inference
+from fabricpc_jax.models.graph_net import initialize_state
 from fabricpc_jax.core.initialization import get_default_state_init
 
 

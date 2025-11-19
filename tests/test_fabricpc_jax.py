@@ -27,7 +27,7 @@ jax.config.update("jax_platform_name", "cpu")
 
 def test_graph_construction(rng_key):
     """Test building a graph with slot validation and node classes."""
-    from fabricpc_jax.models.graph_net_v2 import create_pc_graph
+    from fabricpc_jax.models.graph_net import create_pc_graph
 
     print("\n1. Testing graph construction with slots...")
 
@@ -101,7 +101,7 @@ def test_graph_construction(rng_key):
 
 def test_invalid_slot():
     """Test that invalid slot connections are rejected."""
-    from fabricpc_jax.models.graph_net_v2 import build_graph_structure
+    from fabricpc_jax.models.graph_net import build_graph_structure
 
     print("\n2. Testing slot validation (should reject invalid slot)...")
 
@@ -125,8 +125,8 @@ def test_invalid_slot():
 
 def run_inference_test(params, structure, rng_key):
     """Test inference loop with local Jacobian-based gradients."""
-    from fabricpc_jax.core.inference_v2 import run_inference
-    from fabricpc_jax.models.graph_net_v2 import initialize_state
+    from fabricpc_jax.core.inference import run_inference
+    from fabricpc_jax.models.graph_net import initialize_state
 
     print("\n3. Testing inference with local gradients...")
 
