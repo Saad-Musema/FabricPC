@@ -17,11 +17,11 @@ flax>=0.7.5
 chex>=0.1.84  # Testing utilities for JAX
 jaxtyping>=0.2.23  # Type hints for JAX arrays
 
-# Data loading (same as PyTorch version)
+# Data loading
 torch>=2.0.0
 torchvision>=0.15.0
 
-# Visualization (same as PyTorch version)
+# Visualization
 plotly>=5.0.0
 numpy>=1.24.0
 tqdm>=4.65.0
