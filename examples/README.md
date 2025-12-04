@@ -5,8 +5,10 @@ This directory contains example scripts demonstrating FabricPC.
 ## Quick Start
 
 ```bash
+# Install FabricPC in editable mode (from project root)
+pip install -e ".[dev,torch,viz]"
+
 # Run MNIST demo
-export PYTHONPATH=$PYTHONPATH:$(pwd)
 python examples/mnist_demo.py
 ```
 
@@ -73,5 +75,7 @@ This is harmless for now but will be addressed in future versions by switching t
 First batch will be slow due to JIT compilation (~5-10 seconds). Subsequent batches are fast.
 
 ## Troubleshooting
-**Import Error**: Make sure PYTHONPATH is set:
-
+**Import Error**: Make sure FabricPC is installed:
+```bash
+pip install -e ".[dev,torch,viz]"
+```

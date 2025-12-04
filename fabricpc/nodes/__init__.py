@@ -1,42 +1,56 @@
 """
 Node types for JAX predictive coding networks.
+
+This module provides:
+- NodeBase: Abstract base class for all node types
+- Built-in node implementations (LinearNode, etc.)
+- Node registry for custom node registration
+- Config validation for node parameters
 """
 
 from fabricpc.nodes.base import (
     SlotSpec,
     Slot,
     NodeBase,
+    FlattenInputMixin,
 )
+from fabricpc.nodes.registry import (
+    register_node,
+    get_node_class,
+    list_node_types,
+    unregister_node,
+    clear_registry,
+    validate_node_config,
+    discover_external_nodes,
+    NodeRegistrationError,
+)
+
+# Import node modules to trigger @register_node decorators
 from fabricpc.nodes.linear import LinearNode, LinearExplicitGrad
 
-from typing import Type
-def get_node_class_from_type(node_type: str) -> Type[NodeBase]:
-    """
-    Args:
-        node_type: Type of node ("linear", "transformer", etc.)
-    Returns:
-        Node class (not instance, since nodes are collections of static methods)
-    Raises:
-        ValueError: If node_type is not recognized
-    """
+# Discover external nodes from installed packages
+discover_external_nodes()
 
-    node_types = {
-        "linear": LinearNode,
-        "linear_explicit_grad": LinearExplicitGrad,
-    }
-
-    if node_type.lower() not in node_types:
-        raise ValueError(
-            f"Unknown node type '{node_type}'. "
-            f"Supported types: {list(node_types.keys())}"
-        )
-    return node_types[node_type.lower()]
+# Backward compatibility alias
+get_node_class_from_type = get_node_class
 
 __all__ = [
+    # Base classes and mixins
     "SlotSpec",
     "Slot",
     "NodeBase",
-    "get_node_class_from_type",
+    "FlattenInputMixin",
+    # Registry
+    "register_node",
+    "get_node_class",
+    "get_node_class_from_type",  # deprecated alias
+    "list_node_types",
+    "unregister_node",
+    "clear_registry",
+    "validate_node_config",
+    "discover_external_nodes",
+    "NodeRegistrationError",
+    # Built-in nodes
     "LinearNode",
     "LinearExplicitGrad",
 ]

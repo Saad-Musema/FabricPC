@@ -14,13 +14,15 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 
-from fabricpc.nodes.base import NodeBase, SlotSpec
+from fabricpc.nodes.base import NodeBase, SlotSpec, FlattenInputMixin
+from fabricpc.nodes.registry import register_node
 from fabricpc.core.types import NodeParams, NodeState, NodeInfo
 from fabricpc.core.activations import get_activation
 from fabricpc.core.initialization import initialize_weights
 
 
-class LinearNode(NodeBase):
+@register_node("linear")
+class LinearNode(FlattenInputMixin, NodeBase):
     """
     Linear transformation node: y = activation(W @ x + b)
 
@@ -29,6 +31,8 @@ class LinearNode(NodeBase):
     - Concatenates all inputs and applies a linear transformation
     - Supports various activation functions
     - Implements local Hebbian learning
+
+    Uses FlattenInputMixin for flatten/reshape operations.
     """
 
     @staticmethod
@@ -132,7 +136,6 @@ class LinearNode(NodeBase):
         # Get batch size and output shape
         batch_size = state.z_latent.shape[0]
         out_shape = node_info.shape  # e.g., (128,) or (28, 28, 1)
-        out_numel = int(np.prod(out_shape))
 
         if node_info.in_degree == 0:
             # Source nodes: no inputs
@@ -141,17 +144,10 @@ class LinearNode(NodeBase):
             error = jnp.zeros_like(state.z_latent)
             gain_mod_error = jnp.zeros_like(state.z_latent)
         else:
-            # Linear transformation with flatten/reshape
-            # Accumulate in flat space: (batch, out_numel)
-            pre_activation_flat = jnp.zeros((batch_size, out_numel))
-
-            for edge_key, x in inputs.items():
-                # Flatten input: (batch, *in_shape) -> (batch, in_numel)
-                x_flat = x.reshape(batch_size, -1)
-                pre_activation_flat = pre_activation_flat + jnp.matmul(x_flat, params.weights[edge_key])
-
-            # Reshape to output shape: (batch, out_numel) -> (batch, *out_shape)
-            pre_activation = pre_activation_flat.reshape(batch_size, *out_shape)
+            # Linear transformation using mixin
+            pre_activation = FlattenInputMixin.compute_linear(
+                inputs, params.weights, batch_size, out_shape
+            )
 
             # Add bias if present (bias already has shape (1, *out_shape))
             if "b" in params.biases and params.biases["b"].size > 0:
@@ -182,6 +178,7 @@ class LinearNode(NodeBase):
         return total_energy, state
 
 
+@register_node("linear_explicit_grad")
 class LinearExplicitGrad(LinearNode):
     """
     Linear node that overrides NodeBase's autodiff-based gradient computation.
@@ -231,8 +228,6 @@ class LinearExplicitGrad(LinearNode):
         latent_is_preactivation = node_info.node_config.get("latent_type") == "preactivation"
         input_grads = {}
 
-        batch_size = state.z_latent.shape[0]
-
         # Back-synapse gradients for each edge, and accumulate to source nodes
         # ∂E/∂z_source = -W^T @ gain_mod_error_target
         for edge_key, z in inputs.items():
@@ -246,12 +241,10 @@ class LinearExplicitGrad(LinearNode):
                     # error (batch, dim_tgt)
                     # weights{s->t} (dim_src, dim_tgt)
                 else:
-                    # Flatten gain_mod_error: (batch, *out_shape) -> (batch, out_numel)
-                    gain_mod_error_flat = state.gain_mod_error.reshape(batch_size, -1)
-                    # Compute gradient in flat space: (batch, out_numel) @ (out_numel, in_numel) -> (batch, in_numel)
+                    # Flatten gain_mod_error and compute gradient in flat space
+                    gain_mod_error_flat = FlattenInputMixin.flatten_input(state.gain_mod_error)
                     grad_flat = -jnp.matmul(gain_mod_error_flat, params.weights[edge_key].T)
-                    # Reshape back to source shape: (batch, in_numel) -> (batch, *source_shape)
-                    grad_contribution = grad_flat.reshape(batch_size, *source_shape)
+                    grad_contribution = FlattenInputMixin.reshape_output(grad_flat, source_shape)
             else:
                 raise NotImplementedError(f"energy functional '{energy_functional}' not implemented in LinearNode.")
 
@@ -290,60 +283,23 @@ class LinearExplicitGrad(LinearNode):
         # Forward pass to get new state
         _, state = node_class.forward(params, inputs, state, node_info)
 
-        batch_size = state.z_latent.shape[0]
         weight_grads = {}
         bias_grads = {}
 
-        # Flatten gain_mod_error: (batch, *out_shape) -> (batch, out_numel)
-        gain_mod_error_flat = state.gain_mod_error.reshape(batch_size, -1)
+        # Flatten gain_mod_error using mixin
+        gain_mod_error_flat = FlattenInputMixin.flatten_input(state.gain_mod_error)
 
         # Weight gradient
         for edge_key, in_tensor in inputs.items():
-            # Flatten input: (batch, *in_shape) -> (batch, in_numel)
-            in_flat = in_tensor.reshape(batch_size, -1)
+            in_flat = FlattenInputMixin.flatten_input(in_tensor)
             # Compute gradient: (in_numel, batch) @ (batch, out_numel) -> (in_numel, out_numel)
             grad_w = -jnp.matmul(in_flat.T, gain_mod_error_flat)
             weight_grads[edge_key] = grad_w
 
         # Bias gradient - sum over batch, keep shape (1, *out_shape)
         if "b" in params.biases:
-            # Sum over batch dimension only, reshape gain_mod_error_flat back to out_shape
-            out_shape = node_info.shape
-            gain_mod_error_shaped = state.gain_mod_error  # already (batch, *out_shape)
             # Sum over batch (axis=0), keepdims to get (1, *out_shape)
-            grad_b = -jnp.sum(gain_mod_error_shaped, axis=0, keepdims=True)
+            grad_b = -jnp.sum(state.gain_mod_error, axis=0, keepdims=True)
             bias_grads["b"] = grad_b
 
         return state, NodeParams(weights=weight_grads, biases=bias_grads)
-
-
-
-
-    #
-    # @staticmethod
-    # def forward_inference(
-    #     params: NodeParams,
-    #     inputs: Dict[str, jnp.ndarray],  # EdgeInfo.key -> inputs data
-    #     state: NodeState,  # state object for the present node
-    #     node_info: NodeInfo,
-    # ) -> Tuple[NodeState, Dict[str, jnp.ndarray]]:
-    #     """
-    #     Forward pass: updates node state and computes gradients w.r.t. inputs.
-    #
-    #     Delegate to NodeBase's implementation which uses JAX autodiff.
-    #     """
-    #     return NodeBase.forward_inference(params, inputs, state, node_info)
-    #
-    # @staticmethod
-    # def forward_learning(
-    #     params: NodeParams,
-    #     inputs: Dict[str, jnp.ndarray],
-    #     state: NodeState,  # state object for the present node
-    #     node_info: NodeInfo
-    # ) -> Tuple[NodeState, NodeParams]:
-    #     """
-    #     Forward pass: update state and compute gradients of weights for local learning.
-    #
-    #     Delegate to NodeBase's implementation which uses JAX autodiff.
-    #     """
-    #     return NodeBase.forward_learning(params, inputs, state, node_info)

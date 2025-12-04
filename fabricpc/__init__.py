@@ -19,7 +19,9 @@ Example:
     >>> params = train_pcn(params, structure, train_loader, config)
 """
 
-__version__ = "0.2.0"
+from importlib.metadata import version
+
+__version__ = version("fabricpc")
 
 from fabricpc import core, graph, nodes, training
 from fabricpc.core import types, activations, inference, initialization

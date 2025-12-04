@@ -27,7 +27,7 @@ from fabricpc.core.initialization import (
     parse_state_init_config,
     get_default_state_init,
 )
-from fabricpc.nodes import get_node_class_from_type
+from fabricpc.nodes import get_node_class_from_type, validate_node_config
 from fabricpc.core.inference import gather_inputs
 from fabricpc.utils.helpers import update_node_in_state
 
@@ -184,8 +184,12 @@ def build_graph_structure(config: dict) -> GraphStructure:
         node_type = node_config.get("type", "linear").lower()
         activation_config = node_config.get("activation", {"type": "identity"})
 
+        # Validate config against node's CONFIG_SCHEMA and apply defaults
+        node_class = get_node_class_from_type(node_type)
+        validated_config = validate_node_config(node_class, node_config)
+
         # Validate and build slots
-        slots = validate_node_and_build_slots(node_config, name, edges)
+        slots = validate_node_and_build_slots(validated_config, name, edges)
 
         # Find incoming and outgoing edges
         in_edges: List[str] = []
@@ -197,12 +201,12 @@ def build_graph_structure(config: dict) -> GraphStructure:
             if edge_info.source == name:
                 out_edges.append(edge_key)
 
-        # Construct the node object
+        # Construct the node object with validated config (includes defaults)
         nodes[name] = NodeInfo(
             name=name,
             shape=shape,
             node_type=node_type,
-            node_config=node_config,
+            node_config=validated_config,
             activation_config=activation_config,
             slots=slots,
             in_degree=len(in_edges),

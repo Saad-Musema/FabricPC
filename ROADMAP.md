@@ -54,47 +54,19 @@ This roadmap addresses:
 **Goal**: Allow developers to register custom node types without modifying library code.
 
 **Requirements**:
-- [ ] Create node registry with decorator-based registration
-- [ ] Support runtime node type discovery
-- [ ] Validate custom nodes implement required interface
-- [ ] Provide base mixins for common patterns
+- [x] Create node registry with decorator-based registration
+- [x] Support runtime node type discovery
+- [x] Validate custom nodes implement required interface
+- [x] Provide base mixins for common patterns
 
 **Implementation**:
 ```python
-# fabricpc/nodes/registry.py
-from typing import Dict, Type
-from fabricpc.nodes.base import NodeBase
-
-_NODE_REGISTRY: Dict[str, Type[NodeBase]] = {}
-
-def register_node(name: str):
-    """Decorator to register custom node types."""
-    def decorator(cls: Type[NodeBase]):
-        if not issubclass(cls, NodeBase):
-            raise TypeError(f"{cls.__name__} must inherit from NodeBase")
-        _NODE_REGISTRY[name] = cls
-        return cls
-    return decorator
-
-def get_node_class(node_type: str) -> Type[NodeBase]:
-    """Get node class by type name."""
-    if node_type not in _NODE_REGISTRY:
-        raise ValueError(f"Unknown node type: {node_type}. "
-                        f"Available: {list(_NODE_REGISTRY.keys())}")
-    return _NODE_REGISTRY[node_type]
-
 # Usage in user code:
 @register_node("my_custom_layer")
 class MyCustomNode(NodeBase):
     ...
 ```
 
-**Files to Create/Modify**:
-- `fabricpc/nodes/registry.py` - New registry system
-- `fabricpc/nodes/__init__.py` - Export registration API
-- `fabricpc/graph/graph_net.py` - Use registry for node instantiation
-
----
 
 ### 1.3 Configurable Energy Functionals
 

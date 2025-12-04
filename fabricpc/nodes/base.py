@@ -27,6 +27,92 @@ class Slot:
     spec: SlotSpec
     in_neighbors: Dict[str, str]  # edge_key -> source_node_name mapping
 
+
+class FlattenInputMixin:
+    """
+    Mixin providing flatten/reshape utilities for dense (fully-connected) nodes.
+
+    Use this mixin when your node needs to:
+    - Flatten arbitrary-shaped inputs to 2D for matrix multiplication
+    - Reshape flat outputs back to a target shape
+
+    Example usage:
+        @register_node("my_dense")
+        class MyDenseNode(FlattenInputMixin, NodeBase):
+            @staticmethod
+            def forward(params, inputs, state, node_info):
+                batch_size = state.z_latent.shape[0]
+                out_shape = node_info.shape
+
+                # Flatten inputs and compute linear transformation
+                pre_activation = FlattenInputMixin.compute_linear(
+                    inputs, params.weights, batch_size, out_shape
+                )
+                ...
+    """
+
+    @staticmethod
+    def flatten_input(x: jnp.ndarray) -> jnp.ndarray:
+        """
+        Flatten input tensor to 2D: (batch, *shape) -> (batch, numel).
+
+        Args:
+            x: Input tensor with batch dimension first
+
+        Returns:
+            Flattened tensor of shape (batch, numel)
+        """
+        batch_size = x.shape[0]
+        return x.reshape(batch_size, -1)
+
+    @staticmethod
+    def reshape_output(x_flat: jnp.ndarray, out_shape: Tuple[int, ...]) -> jnp.ndarray:
+        """
+        Reshape flat tensor to target shape: (batch, numel) -> (batch, *out_shape).
+
+        Args:
+            x_flat: Flat tensor of shape (batch, numel)
+            out_shape: Target shape (excluding batch dimension)
+
+        Returns:
+            Reshaped tensor of shape (batch, *out_shape)
+        """
+        batch_size = x_flat.shape[0]
+        return x_flat.reshape(batch_size, *out_shape)
+
+    @staticmethod
+    def compute_linear(
+        inputs: Dict[str, jnp.ndarray],
+        weights: Dict[str, jnp.ndarray],
+        batch_size: int,
+        out_shape: Tuple[int, ...]
+    ) -> jnp.ndarray:
+        """
+        Compute linear transformation: sum of (flattened_input @ weight) for each edge.
+
+        Flattens each input, applies matmul with corresponding weight matrix,
+        accumulates results, and reshapes to output shape.
+
+        Args:
+            inputs: Dictionary mapping edge keys to input tensors
+            weights: Dictionary mapping edge keys to weight matrices (in_numel, out_numel)
+            batch_size: Batch size for output initialization
+            out_shape: Target output shape (excluding batch)
+
+        Returns:
+            Pre-activation tensor of shape (batch, *out_shape)
+        """
+        import numpy as np
+        out_numel = int(np.prod(out_shape))
+        pre_activation_flat = jnp.zeros((batch_size, out_numel))
+
+        for edge_key, x in inputs.items():
+            x_flat = FlattenInputMixin.flatten_input(x)
+            pre_activation_flat = pre_activation_flat + jnp.matmul(x_flat, weights[edge_key])
+
+        return FlattenInputMixin.reshape_output(pre_activation_flat, out_shape)
+
+
 class NodeBase(ABC):
     """
     Abstract base class for all predictive coding nodes.
