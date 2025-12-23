@@ -499,15 +499,5 @@ def initialize(
     return init_class.initialize(key, shape, validated_config)
 
 
-# TODO deprecate these backward-compatible functions in future releases
-def get_default_weight_init() -> Dict[str, Any]:
-    """Get default weight initialization config."""
-    return {"type": "normal", "mean": 0.0, "std": 0.05}
-
-def get_default_state_init() -> Dict[str, Any]:
-    """Get default state value initialization config."""
-    return {"type": "normal", "mean": 0.0, "std": 0.05}
-
-
 # Auto-discover external initializers on import
 discover_external_initializers()

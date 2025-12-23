@@ -24,15 +24,6 @@ from fabricpc.core.inference import (
     run_inference,
 )
 
-# Initialization utilities (backward compatible)
-from fabricpc.core.initialization import (
-    initialize_weights,
-    initialize_state_values,
-    parse_state_init_config,
-    get_default_weight_init,
-    get_default_state_init,
-)
-
 # Initializer registry
 from fabricpc.core.initializers import (
     InitializerBase,

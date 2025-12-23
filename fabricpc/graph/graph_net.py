@@ -15,7 +15,7 @@ Config schemas are defined at the appropriate level:
 - Energy/Activation schemas: Defined in their respective classes and validated via delegation
 """
 
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple
 import jax
 import jax.numpy as jnp
 from fabricpc.core.types import (
@@ -102,35 +102,6 @@ def initialize_params(
         node_params[node_name] = params_obj
 
     return GraphParams(nodes=node_params)
-
-# TODO deprecated
-def initialize_state(
-    structure: GraphStructure,
-    batch_size: int,
-    rng_key: jax.Array,
-    clamps: Dict[str, jnp.ndarray] = None,
-    state_init_config: Dict[str, Any] = None,
-    params: GraphParams = None,
-) -> GraphState:
-    """
-    Initialize graph state for inference.
-
-    Args:
-        structure: Graph structure
-        batch_size: Batch size
-        rng_key: JAX random key for state initialization
-        clamps: Optional dictionary of clamped values, keyed on node names
-        state_init_config: State initialization configuration dict with "type" field.
-                          Use structure.config["graph_state_initializer"] for default.
-        params: GraphParams (required for feedforward init)
-
-    Returns:
-        Initial GraphState with latent gradients
-    """
-    from fabricpc.graph.state_initializer import initialize_graph_state
-    return initialize_graph_state(
-        structure, batch_size, rng_key, clamps, state_init_config, params
-    )
 
 def set_latents_to_clamps(
     state: GraphState,

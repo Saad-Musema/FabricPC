@@ -22,7 +22,8 @@ import jax
 import jax.numpy as jnp
 
 from fabricpc.core.types import NodeState, NodeParams, GraphState
-from fabricpc.graph.graph_net import create_pc_graph, build_graph_structure, initialize_state
+from fabricpc.graph.graph_net import create_pc_graph, build_graph_structure
+from fabricpc.graph.state_initializer import initialize_graph_state
 from fabricpc.core.inference import run_inference
 from fabricpc.training import train_step, compute_local_weight_gradients
 from fabricpc.training.optimizers import create_optimizer
@@ -175,7 +176,7 @@ class TestInference:
         state_key = inference_data["state_key"]
 
         # Initialize state with feedforward initialization
-        initial_state = initialize_state(
+        initial_state = initialize_graph_state(
             structure, batch_size, state_key, clamps=clamps,
             state_init_config=structure.config["graph_state_initializer"], params=params
         )
@@ -225,7 +226,7 @@ class TestInference:
         state_key = inference_data["state_key"]
 
         # Initialize and run inference
-        initial_state = initialize_state(
+        initial_state = initialize_graph_state(
             structure, batch_size, state_key, clamps=clamps,
             state_init_config=structure.config["graph_state_initializer"], params=params
         )

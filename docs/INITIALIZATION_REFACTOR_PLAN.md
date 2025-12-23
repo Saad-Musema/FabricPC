@@ -115,7 +115,7 @@ def initialize_graph_state(structure, batch_size, rng_key, clamps=None, state_in
 ### Step 3: Update `fabricpc/core/initialization.py`
 
 Refactor existing functions to delegate to new system:
-
+And then remove them:
 ```python
 def initialize_weights(config, key, shape) -> jnp.ndarray:
     from fabricpc.core.initializers import initialize
@@ -125,8 +125,6 @@ def initialize_state_values(config, key, shape) -> jnp.ndarray:
     from fabricpc.core.initializers import initialize
     return initialize(key, shape, config)
 ```
-
-Keep `get_default_weight_init()` and `get_default_state_init()` for backward compatibility, but import from initializers.py.
 
 Remove/deprecate: `parse_state_init_config()` (logic moves to StateInitBase implementations)
 

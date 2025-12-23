@@ -95,7 +95,7 @@ def train_step(
     Returns:
         Tuple of (updated_params, updated_opt_state, loss, final_state)
     """
-    from fabricpc.graph.graph_net import initialize_state
+    from fabricpc.graph.state_initializer import initialize_graph_state
 
     batch_size = next(iter(batch.values())).shape[0]
 
@@ -107,7 +107,7 @@ def train_step(
             clamps[node_name] = task_value
 
     # Initialize state using graph config
-    init_state = initialize_state(
+    init_state = initialize_graph_state(
         structure, batch_size, rng_key, clamps=clamps,
         state_init_config=structure.config["graph_state_initializer"], params=params
     )
@@ -271,7 +271,7 @@ def eval_step(
     Returns:
         Tuple of (loss, correct, batch_size)
     """
-    from fabricpc.graph.graph_net import initialize_state
+    from fabricpc.graph.state_initializer import initialize_graph_state
 
     batch_size = batch["x"].shape[0]
 
@@ -282,7 +282,7 @@ def eval_step(
         clamps[x_node] = batch["x"]
 
     # Initialize and run inference
-    state = initialize_state(
+    state = initialize_graph_state(
         structure, batch_size, rng_key, clamps=clamps,
         state_init_config=structure.config["graph_state_initializer"], params=params
     )

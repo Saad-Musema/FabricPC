@@ -18,7 +18,7 @@ import pytest
 import jax
 import jax.numpy as jnp
 
-from fabricpc.graph.graph_net import create_pc_graph, initialize_state
+from fabricpc.graph.graph_net import create_pc_graph
 from fabricpc.graph.state_initializer import (
     StateInitBase,
     register_state_init,
@@ -353,8 +353,8 @@ class TestClampHandling:
 class TestConvenienceFunctions:
     """Test convenience functions."""
 
-    def test_initialize_state_wrapper(self, simple_graph_config, rng_key):
-        """Test that initialize_state wrapper works correctly."""
+    def test_initialize_graph_state_function(self, simple_graph_config, rng_key):
+        """Test that initialize_graph_state convenience function works correctly."""
         params, structure = create_pc_graph(simple_graph_config, rng_key)
 
         batch_size = 4
@@ -362,8 +362,8 @@ class TestConvenienceFunctions:
         y = jax.random.normal(rng_key, (batch_size, 10))
         clamps = {"input": x, "output": y}
 
-        # Use the wrapper function
-        state = initialize_state(
+        # Use the convenience function
+        state = initialize_graph_state(
             structure, batch_size, rng_key,
             clamps=clamps,
             params=params

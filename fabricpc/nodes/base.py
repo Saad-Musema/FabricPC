@@ -195,7 +195,7 @@ class NodeBase(ABC):
             For a linear node with inputs from edge "a->b:in":
             in_numel = int(np.prod(input_shapes["a->b:in"]))
             out_numel = int(np.prod(node_shape))
-            weights = {"a->b:in": initialize_weights(key, (in_numel, out_numel))}
+            weights = {"a->b:in": initialize(config, key, (in_numel, out_numel))}
             biases = {"b": jnp.zeros((1,) + node_shape)}
             return NodeParams(weights=weights, biases=biases)
         """

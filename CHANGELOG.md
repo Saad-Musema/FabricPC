@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.4] - 2025-12-24
+- Added support for custom initializers with registry pattern. Introduced `InitializerBase` and `StateInitializerBase` classes for extensibility.
+- Replaced initialize_weights() and initialize_state_values() with fabricpc.core.initializers.initialize() function.
+- Added config attribute to GraphStructure class and field "graph_state_initializer".
+
 ## [0.2.3] - 2025-12-18
 - Change Linear node default behavior to perform matmul on the last tensor dimension. Flattening inputs now requires flag `flatten_input=True`.
 - Removed gain_mod_error from NodeState, as it was not used by anything other than explicit grad linear node.

@@ -26,8 +26,6 @@ from fabricpc.core.initializers import (
     unregister_initializer,
     validate_initializer_config,
     initialize,
-    get_default_weight_init,
-    get_default_state_init,
     InitializerRegistrationError,
 )
 
@@ -292,22 +290,6 @@ class TestConfigValidation:
 
         assert validated["mean"] == 1.0
         assert validated["std"] == 0.5
-
-    def test_default_weight_init(self):
-        """Test get_default_weight_init returns normal config."""
-        config = get_default_weight_init()
-
-        assert config["type"] == "normal"
-        assert config["mean"] == 0.0
-        assert config["std"] == 0.05
-
-    def test_default_state_init(self):
-        """Test get_default_state_init returns normal config."""
-        config = get_default_state_init()
-
-        assert config["type"] == "normal"
-        assert config["mean"] == 0.0
-        assert config["std"] == 0.05
 
 
 class TestInitializerDeterminism:
