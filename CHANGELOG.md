@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.5] - 2025-12-25
+- Added v1 TransformerBlockNode encapsulating multi-head attention, layer normalization, and feedforward networks using Rotary Position Embeddings (RoPE)
+- Refactored state initialization: renames "distribution" to "global", adds "node_distribution", and removes fallback configurations.
+- Unifies output metric computation across training modules and returns both energy and cross-entropy for autoregressive training.
+
 ## [0.2.4] - 2025-12-24
 - Added support for custom initializers with registry pattern. Introduced `InitializerBase` and `StateInitializerBase` classes for extensibility.
 - Replaced initialize_weights() and initialize_state_values() with fabricpc.core.initializers.initialize() function.

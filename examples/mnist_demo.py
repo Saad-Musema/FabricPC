@@ -123,7 +123,7 @@ print(f"Avg Training time: {delta_t / train_config["num_epochs"]:.2f} seconds pe
 print("\nEvaluating...")
 metrics = evaluate_pcn(trained_params, structure, test_loader, train_config, eval_key)
 print(f"Test Accuracy: {metrics['accuracy'] * 100:.2f}%")
-print(f"Test Loss: {metrics['loss']:.4f}")
+print(f"Test energy: {metrics['energy']:.4f}")
 
 print("\n" + "="*70)
 print("That's it! Want to change the architecture?")

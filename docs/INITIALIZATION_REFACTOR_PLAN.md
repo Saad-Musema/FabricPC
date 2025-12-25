@@ -92,9 +92,8 @@ class StateInitBase(ABC):
 
 **Built-in Implementations:**
 
-1. `DistributionStateInit`:
+1. `GlobalStateInit`:
    - CONFIG: `default_initializer` (dict, default `{"type": "normal"}`)
-   - For each node: use `node_config["latent_init"]` if present, else `default_initializer`
    - Processes nodes independently
 
 2. `FeedforwardStateInit`:
@@ -220,8 +219,8 @@ state = initialize_state(structure, batch_size, key, clamps, state_init_config, 
 - Test config validation with defaults
 
 **`tests/test_state_initializer.py`:**
-- Test DistributionStateInit with graph-level config
-- Test DistributionStateInit with node-level override
+- Test GlobalStateInit with graph-level config
+- Test NodeDistributionStateInit with node-level override
 - Test FeedforwardStateInit requires params
 - Test FeedforwardStateInit topological propagation
 - Test clamp handling in both strategies

@@ -2,18 +2,18 @@
 Transformer Predictive Coding Demo
 ==================================
 
-A quick experiment demonstrating transformer blocks with predictive coding
+A quick experiment demonstrating transformer blocks with predictive coding versus backprop training
 on character-level language modeling using the TinyShakespeare dataset.
 
 This demo:
 1. Downloads TinyShakespeare (~1MB of text)
 2. Trains a small transformer for next-character prediction
 3. Generates sample text
-4. Backprop training option, set use_pcn=False
+4. Backprop training option, set use_pcn = False
 
-Expected runtime: ~5-10 minutes on a consumer GPU (RTX 3080/4080 class)
+Expected runtime: ~5-20 minutes on a consumer GPU (RTX 3080/4080 class)
 
-Training needs tuning, eval metrics, and AIM tensor board - treat this as a starting point!
+Training with PC exhibits mode collapse; needs tuning, better weight init, and AIM tensor board - treat this as a starting point!
 """
 
 import os
@@ -23,7 +23,6 @@ os.environ.setdefault("JAX_PLATFORMS", "cuda")
 import jax
 import jax.numpy as jnp
 import numpy as np
-import os
 import time
 import urllib.request
 from typing import Tuple, Iterator, Dict, List
@@ -341,6 +340,8 @@ def main():
     print("=" * 70)
     print("Transformer Predictive Coding Demo")
     print("Character-level language modeling on TinyShakespeare")
+    print("")
+    print("Not yet tuned in hyperparams and weight initialization for PC training - treat this as a starting point!")
     print("=" * 70)
 
     # Choose training mode (PC or backprop)

@@ -3,8 +3,8 @@
 Test suite for the State Initializer system.
 
 Tests:
-- DistributionStateInit with graph-level config
-- DistributionStateInit with node-level override
+- GlobalStateInit with graph-level config
+- NodeDistributionStateInit with node-level override
 - FeedforwardStateInit requires params
 - FeedforwardStateInit topological propagation
 - Clamp handling in both strategies
@@ -87,7 +87,7 @@ class TestStateInitRegistry:
 
 
 class TestDistributionStateInit:
-    """Test suite for DistributionStateInit."""
+    """Test suite for GlobalStateInit."""
 
     def test_distribution_init_graph_level_config(self, simple_graph_config, rng_key):
         """Test distribution init with graph-level default initializer."""
@@ -582,12 +582,11 @@ class TestFeedforwardZeroError:
 
         # Save original latent states
         original_latents = {
-            name: state.nodes[name].z_latent.copy()
+            name: state.nodes[name].z_latent
             for name in structure.nodes
         }
 
         # Run inference with no output clamp
-        infer_key = jax.random.fold_in(rng_key, 1)
         final_state = run_inference(
             params, state, clamps, structure,
             infer_steps=10, eta_infer=0.1

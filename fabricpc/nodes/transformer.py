@@ -294,7 +294,7 @@ class TransformerBlockNode(NodeBase):
         # Residual connection 2
         z_mu = x_res1 + ff_output
 
-        pre_activation = z_mu.copy()
+        pre_activation = z_mu
         error = state.z_latent - z_mu
 
         state = state._replace(
@@ -351,7 +351,7 @@ class TransformerBlockNode(NodeBase):
         4. Concatenate heads and final linear projection
         5. Apply activation function
 
-        Variables are named using standard transformer notation; don't change for PEP compatibility.
+        Variables are named using standard transformer notation for mathematical clarity; don't change for PEP styling.
         """
 
         # Get input (self-attention)

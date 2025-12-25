@@ -160,7 +160,7 @@ def register_state_init(init_type: str):
 
     Usage:
         @register_state_init("distribution")
-        class DistributionStateInit(StateInitBase):
+        class GlobalStateInit(StateInitBase):
             ...
 
     Args:
@@ -255,7 +255,7 @@ def discover_external_state_inits() -> None:
 # =============================================================================
 
 @register_state_init("global")
-class DistributionStateInit(StateInitBase):
+class GlobalStateInit(StateInitBase):
     """
     Initialize states from a distribution.
     Each node's state is initialized using a graph-level initializer applied to all nodes.
@@ -298,7 +298,7 @@ class DistributionStateInit(StateInitBase):
             shape = (batch_size, *node_info.shape)
 
             if node_name in clamps:
-                z_latent = clamps[node_name].copy()
+                z_latent = clamps[node_name]
             else:
                 z_latent = initialize(node_key_map[node_name], shape, global_init_config)
 
@@ -326,7 +326,8 @@ class NodeDistributionStateInit(StateInitBase):
     """
 
     CONFIG_SCHEMA = {
-    }
+    }  # No additional config options
+
 
     @staticmethod
     def initialize_state(
@@ -350,7 +351,7 @@ class NodeDistributionStateInit(StateInitBase):
             shape = (batch_size, *node_info.shape)
 
             if node_name in clamps:
-                z_latent = clamps[node_name].copy()
+                z_latent = clamps[node_name]
             else:
                 node_init_config = node_info.node_config["latent_init"]
                 z_latent = initialize(node_key_map[node_name], shape, node_init_config)
@@ -384,7 +385,7 @@ class FeedforwardStateInit(StateInitBase):
     """
 
     CONFIG_SCHEMA = {
-    }
+    }  # No additional config options
 
     @staticmethod
     def initialize_state(
@@ -413,7 +414,7 @@ class FeedforwardStateInit(StateInitBase):
             shape = (batch_size, *node_info.shape)
 
             if node_name in clamps:
-                z_latent = clamps[node_name].copy()
+                z_latent = clamps[node_name]
             else:
                 fallback_config = node_info.node_config["latent_init"]
                 z_latent = initialize(node_key_map[node_name], shape, fallback_config)
@@ -440,8 +441,8 @@ class FeedforwardStateInit(StateInitBase):
                 node_class = get_node_class(node_info.node_type)
                 edge_inputs = gather_inputs(node_info, structure, state)
 
-                _, projected= node_class.forward(node_params, edge_inputs, node_state, node_info)
-                # node forward modifies z_mu, pre_activation, errror, and energy
+                _, projected = node_class.forward(node_params, edge_inputs, node_state, node_info)
+                # node forward modifies z_mu, pre_activation, error, and energy
 
                 if node_name not in clamps:
                     # z_latent <- z_mu, error <- 0 (since z_latent = z_mu)
@@ -453,7 +454,7 @@ class FeedforwardStateInit(StateInitBase):
                 else:
                     # Respect clamped values, retain newly computed error
                     node_state = node_state._replace(
-                        z_latent=clamps[node_name].copy(),
+                        z_latent=clamps[node_name],
                         z_mu=projected.z_mu,
                         error=projected.error,
                         energy=projected.energy,

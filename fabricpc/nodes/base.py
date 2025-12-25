@@ -300,7 +300,7 @@ class NodeBase(ABC):
         # handle source nodes
         if node_info.in_degree == 0:
             # Source nodes: no inputs
-            z_mu = state.z_latent.copy()  # prediction is the latent state itself
+            z_mu = state.z_latent  # prediction is the latent state itself
             pre_activation = jnp.zeros_like(state.z_latent)
             error = jnp.zeros_like(state.z_latent)
         else:
@@ -564,7 +564,7 @@ class NodeBase(ABC):
         """
         Resolve state initialization config with validation.
 
-        Uses node_config["latent_init"] if specified, otherwise
+        Uses node_config["latent_init"] if specified, otherwise base node default. Validates against InitializerBase class CONFIG_SCHEMA.
 
         Args:
             node_config: Node configuration dictionary

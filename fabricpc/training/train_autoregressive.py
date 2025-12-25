@@ -148,7 +148,7 @@ def train_step_autoregressive(
         use_causal_mask: Whether to apply causal masking
 
     Returns:
-        Tuple of (updated_params, updated_opt_state, avg_energy, output_ce_loss, final_state)
+        Tuple of (updated_params, updated_opt_state, avg_energy, output_cross_entropy, final_state)
     """
     batch_size = batch["x"].shape[0]
     seq_len = batch["x"].shape[1]
@@ -195,11 +195,6 @@ def train_step_autoregressive(
 
     avg_energy = energy / batch_size
 
-    # Compute output cross-entropy loss for perplexity
-    output_ce_loss = compute_loss(
-        final_state, batch["y"], structure.task_map["y"], loss_type="cross_entropy"
-    )
-
     # Compute local gradients
     grads = compute_local_weight_gradients_ar(params, final_state, structure)
 
@@ -207,7 +202,12 @@ def train_step_autoregressive(
     updates, opt_state = optimizer.update(grads, opt_state, params)
     params = cast(GraphParams, optax.apply_updates(params, updates))
 
-    return params, opt_state, avg_energy.astype(float), output_ce_loss.astype(float), final_state
+    # Compute output cross-entropy loss for perplexity metric - not used for gradients
+    output_cross_entropy = compute_loss(
+        final_state, batch["y"], structure.task_map["y"], loss_type="cross_entropy"
+    )
+
+    return params, opt_state, avg_energy.astype(float), output_cross_entropy.astype(float), final_state
 
 
 def train_autoregressive(
@@ -560,7 +560,7 @@ def _eval_step_autoregressive(
         use_causal_mask: Whether to use causal masking
 
     Returns:
-        Tuple of (loss, predictions)
+        Tuple of (output_cross_entropy, predictions)
     """
     batch_size = batch["x"].shape[0]
     seq_len = batch["x"].shape[1]
@@ -589,10 +589,10 @@ def _eval_step_autoregressive(
 
     # Compute loss and get predictions
     output_node = structure.task_map["y"]
-    loss = compute_loss(final_state, batch["y"], output_node, loss_type="cross_entropy")
+    output_cross_entropy = compute_loss(final_state, batch["y"], output_node, loss_type="cross_entropy")  # For perplexity metric
     predictions = final_state.nodes[output_node].z_mu
 
-    return loss, predictions
+    return output_cross_entropy, predictions
 
 def evaluate_autoregressive(
     params: GraphParams,
