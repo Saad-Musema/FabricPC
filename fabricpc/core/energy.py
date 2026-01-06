@@ -66,7 +66,7 @@ class EnergyFunctional(ABC):
 
     Energy functionals define how prediction errors are converted to scalar
     energy values. The energy drives inference (minimizing E w.r.t. z_latent)
-    and provides the loss signal for learning.
+    and parameter learning (minimizing E w.r.t. params).
 
     All methods are static for JAX compatibility (pure functions, no state).
 

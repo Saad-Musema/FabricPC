@@ -13,7 +13,6 @@ multi_gpu.train_pcn_multi_gpu() by comparing:
 import os
 
 os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
-os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.5")
 os.environ.setdefault("JAX_TRACEBACK_FILTERING", "off")
 
 import copy
@@ -410,44 +409,11 @@ class TestMultiGPUUtilities:
                 assert jnp.allclose(weight[0], weight[1]), "Replicas should be identical"
                 assert jnp.allclose(weight[0], original_weight), "Replica should match original"
 
-    def test_unshard_losses(self):
-        """Test loss unsharding utility."""
-        from fabricpc.training.multi_gpu import unshard_losses
+    def test_unshard_energies(self):
+        """Test energy unsharding utility."""
+        from fabricpc.training.multi_gpu import unshard_energies
 
-        losses = jnp.array([1.0, 2.0, 3.0, 4.0])
-        avg = unshard_losses(losses)
+        energies = jnp.array([1.0, 2.0, 3.0, 4.0])
+        avg = unshard_energies(energies)
 
         assert abs(avg - 2.5) < 1e-6, f"Expected 2.5, got {avg}"
-
-    def test_unshard_grads(self, simple_config, rng_key):
-        """Test gradient unsharding utility."""
-        from fabricpc.training.multi_gpu import unshard_grads, replicate_params
-
-        params, structure = create_pc_graph(simple_config, rng_key)
-
-        # Create fake "gradients" from multiple devices by replicating and modifying
-        replicated = replicate_params(params, n_devices=2)
-
-        # Modify to simulate different gradients from each device
-        def add_device_offset(x, offset):
-            return x + offset
-
-        grads_device0 = jax.tree_util.tree_map(lambda x: x[0] + 1.0, replicated)
-        grads_device1 = jax.tree_util.tree_map(lambda x: x[1] + 2.0, replicated)
-
-        # Stack them back
-        stacked_grads = jax.tree_util.tree_map(
-            lambda a, b: jnp.stack([a, b]),
-            grads_device0,
-            grads_device1
-        )
-
-        # Unshard (average)
-        avg_grads = unshard_grads(stacked_grads)
-
-        # Check that averaging worked
-        for node_name, node_params in avg_grads.nodes.items():
-            for edge_key, weight in node_params.weights.items():
-                original = params.nodes[node_name].weights[edge_key]
-                expected = original + 1.5  # Average of +1.0 and +2.0
-                assert jnp.allclose(weight, expected), f"Gradient averaging failed for {node_name}/{edge_key}"

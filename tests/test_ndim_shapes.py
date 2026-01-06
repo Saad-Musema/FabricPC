@@ -355,14 +355,14 @@ class TestNDimTraining:
         }
 
         # Run training step
-        new_params, new_opt_state, loss, final_state = train_step(
+        new_params, new_opt_state, energy, final_state = train_step(
             params, opt_state, batch, structure, optimizer, rng_key,
             infer_steps=5, eta_infer=0.1
         )
 
-        # Verify loss is valid
-        assert not jnp.isnan(loss), "Loss should not be NaN"
-        assert loss > 0, "Loss should be positive"
+        # Verify energy is valid
+        assert not jnp.isnan(energy), "Energy should not be NaN"
+        assert energy > 0, "Energy should be positive"
 
         # Verify weights were updated
         old_w = params.nodes["hidden"].weights["image->hidden:in"]
@@ -394,13 +394,13 @@ class TestNDimTraining:
             "y": jax.random.normal(rng_key, (batch_size, 5)),
         }
 
-        new_params, _, loss, _ = train_step(
+        new_params, _, energy, _ = train_step(
             params, opt_state, batch, structure, optimizer, rng_key,
             infer_steps=3, eta_infer=0.1
         )
 
-        assert not jnp.isnan(loss)
-        assert loss > 0
+        assert not jnp.isnan(energy)
+        assert energy > 0
 
 
 class TestEnergyWithNDimShapes:

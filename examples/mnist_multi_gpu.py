@@ -24,7 +24,7 @@ from fabricpc.training import train_pcn_multi_gpu, evaluate_pcn_multi_gpu
 from fabricpc.training.data_utils import OneHotWrapper
 
 # Set random seed
-master_rng_key = jax.random.PRNGKey(42)
+master_rng_key = jax.random.PRNGKey(0)
 graph_key, train_key, eval_key = jax.random.split(master_rng_key, 3)
 import torch
 import numpy as np
@@ -39,16 +39,16 @@ np.random.seed(0)
 
 config = {
     "node_list": [
-        {"name": "pixels", "shape": (784,), "type": "linear", "activation": {"type": "identity"}},
-        {"name": "h1",     "shape": (256,), "type": "linear", "activation": {"type": "relu"}},
-        {"name": "h2",     "shape": (64,), "type": "linear", "activation": {"type": "relu"}},
-        {"name": "class",  "shape": (10,), "type": "linear",  "activation": {"type": "identity"}},
+        {"name": "pixels",  "shape": (784,), "type": "linear", "activation": {"type": "identity"}},
+        {"name": "hidden1", "shape": (256,), "type": "linear", "activation": {"type": "sigmoid"}},
+        {"name": "hidden2", "shape": (64,),  "type": "linear", "activation": {"type": "sigmoid"}},
+        {"name": "class",   "shape": (10,),  "type": "linear", "activation": {"type": "sigmoid"}},
     ],
 
     "edge_list": [
-        {"source_name": "pixels", "target_name": "h1",    "slot": "in"},
-        {"source_name": "h1",     "target_name": "h2",    "slot": "in"},
-        {"source_name": "h2",     "target_name": "class", "slot": "in"},
+        {"source_name": "pixels",   "target_name": "hidden1",   "slot": "in"},
+        {"source_name": "hidden1",  "target_name": "hidden2",   "slot": "in"},
+        {"source_name": "hidden2",  "target_name": "class",     "slot": "in"},
     ],
 
     "task_map": {"x": "pixels", "y": "class"},
@@ -105,7 +105,8 @@ print(f"\n[Data Loading]")
 
 transform = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Lambda(lambda x: x.view(-1)),
+    transforms.Normalize((0.1307,), (0.3081,)),
+    transforms.Lambda(lambda x: x.view(-1)),  # Flatten to 784
 ])
 
 train_data = datasets.MNIST('./data', train=True, download=True, transform=transform)

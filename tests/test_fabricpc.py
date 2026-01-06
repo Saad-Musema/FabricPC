@@ -285,7 +285,7 @@ class TestTraining:
         # Run training step
         infer_steps = 10
         eta_infer = 0.1
-        new_params, new_opt_state, loss, final_state = train_step(
+        new_params, new_opt_state, energy, final_state = train_step(
             params, opt_state, batch, structure, optimizer, rng_key, infer_steps, eta_infer
         )
 
@@ -297,9 +297,9 @@ class TestTraining:
             diff = jnp.max(jnp.abs(w_new - w_old))
             assert diff > 0, f"Weights not updated for {node_name}"
 
-        # Verify loss is a valid number
-        assert not jnp.isnan(loss), "Loss should not be NaN"
-        assert loss > 0, "Loss should be positive"
+        # Verify energy is a valid number
+        assert not jnp.isnan(energy), "Energy should not be NaN"
+        assert energy > 0, "Energy should be positive"
 
 
 class TestForwardMethods:

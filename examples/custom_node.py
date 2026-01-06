@@ -232,6 +232,7 @@ def create_conv_mnist_config():
                 "name": "output",
                 "shape": (10,),  # 10 classes
                 "type": "linear",
+                "flatten_input": True,
                 "activation": {"type": "sigmoid"},
             },
         ],
@@ -329,7 +330,7 @@ def main():
     )
 
     print(f"Test Accuracy: {metrics['accuracy'] * 100:.2f}%")
-    print(f"Test Loss: {metrics['loss']:.4f}")
+    print(f"Test Energy: {metrics['energy']:.4f}")
 
     print("\n" + "=" * 70)
     print("Custom node example complete!")

@@ -3,6 +3,16 @@ Multi-GPU training utilities using JAX pmap.
 
 This module provides data-parallel training across multiple GPUs using pmap,
 which replicates the computation across devices and averages gradients.
+
+  | Map-reduce                                               | Inside pmap (pmean) | Outside pmap (jnp.mean) |
+  |----------------------------------------------------------|---------------------|-------------------------|
+  | Do devices need synchronized value for next computation? | ✓                   |                         |
+  | Is it just for logging/metrics?                          |                     | ✓                       |
+  | Does it affect model state (params, opt_state)?          | ✓                   |                         |
+  | Is it a final output we just want to aggregate?          |                     | ✓                       |
+
+  In train_step_pmap, only grads needs pmean because it feeds into the optimizer. The energy can be gathered and averaged on the host since it's only used for logging.
+  Duplicating the optimizer across devices costs memory but is faster for training since each device can update its own copy in parallel.
 """
 
 from typing import Dict, Tuple, Any, cast, Iterable
@@ -75,31 +85,17 @@ def shard_batch(batch: Dict[str, jnp.ndarray], n_devices: int) -> Dict[str, jnp.
     return jax.tree_util.tree_map(shard_array, batch)
 
 
-def unshard_grads(grads: GraphParams) -> GraphParams:
+def unshard_energies(energies: jnp.ndarray) -> float:
     """
-    Average gradients from all devices.
+    Average energy from all devices.
 
     Args:
-        grads: gradients from each device, shape (n_devices,)
+        energies: Energy values from each device, shape (n_devices,)
 
     Returns:
-        Average gradients across devices
+        Average energy across devices
     """
-    return jax.tree_util.tree_map(lambda x: jnp.mean(x, axis=0), grads)
-
-
-# TODO deprecate once migrated to local learning dynamics using sharded gradients
-def unshard_losses(losses: jnp.ndarray) -> float:
-    """
-    Average losses from all devices.
-
-    Args:
-        losses: Loss values from each device, shape (n_devices,)
-
-    Returns:
-        Average loss across devices
-    """
-    return float(jnp.mean(losses))
+    return float(jnp.mean(energies))
 
 
 def train_step_pmap(
@@ -212,7 +208,7 @@ def train_pcn_multi_gpu(
     if verbose:
         print(f"Training on {n_devices} device(s): {jax.devices()}")
 
-    # Don't fallback to single-gpu method. Create shard even for single gpu to ensure consistency.
+    # Create shard even for single gpu to ensure consistency. Don't fallback to single-gpu method.
     if n_devices == 1:
         if verbose:
             print("Only 1 device available, using multi-gpu training function with single device.")
@@ -235,11 +231,15 @@ def train_pcn_multi_gpu(
 
     # Training loop
     for epoch in range(num_epochs):
-        epoch_losses = []
+        epoch_energies = []
 
-        # Split keys for this epoch's batches
+        # Split keys for devices
         epoch_key, rng_key = jax.random.split(rng_key)
-        device_keys = jax.random.split(epoch_key, n_devices)
+        if n_devices > 1:
+            device_keys = jax.random.split(epoch_key, n_devices)
+        else:
+            # Wrap key in array without splitting (preserves exact key for single-GPU equivalence)
+            device_keys = jnp.expand_dims(epoch_key, axis=0)
 
         # Estimate number of batches for key splitting
         num_batches = len(train_loader)
@@ -272,19 +272,19 @@ def train_pcn_multi_gpu(
                 continue
 
             # Training step (parallelized across devices)
-            params, opt_state, losses, _ = pmap_train_step(
+            params, opt_state, energies, final_states = pmap_train_step(
                 params, opt_state, batch_sharded, batch_key_for_step
             )
 
-            # Average losses from all devices
-            avg_loss = unshard_losses(losses)
-            epoch_losses.append(avg_loss)
+            # Average energy from all devices
+            avg_energy = unshard_energies(energies)
+            epoch_energies.append(avg_energy)
 
-        # Compute average loss for epoch
-        avg_loss = sum(epoch_losses) / len(epoch_losses) if epoch_losses else 0.0
+        # Compute average energy for epoch
+        avg_energy = sum(epoch_energies) / len(epoch_energies) if epoch_energies else 0.0
 
         if verbose:
-            print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {avg_loss:.4f}")
+            print(f"Epoch {epoch + 1}/{num_epochs}, Energy: {avg_energy:.4f}")
 
     # Extract params from first device (all devices have same params due to pmean)
     params = jax.tree_util.tree_map(lambda x: x[0], params)
@@ -314,12 +314,14 @@ def evaluate_pcn_multi_gpu(
     """
     n_devices = jax.device_count()
 
-    if n_devices == 1:
-        from fabricpc.training import evaluate_pcn
-        return evaluate_pcn(params, structure, test_loader, config, rng_key)
-
     # Split keys for devices
-    device_keys = jax.random.split(rng_key, n_devices)
+    epoch_key, rng_key = jax.random.split(rng_key)
+    if n_devices > 1:
+        device_keys = jax.random.split(epoch_key, n_devices)
+    else:
+        # Create shard even for single gpu to ensure consistency. Don't fallback to single-gpu method.
+        # Wrap key in array without splitting (preserves exact key for single-GPU equivalence)
+        device_keys = jnp.expand_dims(epoch_key, axis=0)
 
     # Replicate params across devices
     params = replicate_params(params, n_devices)
@@ -337,10 +339,10 @@ def evaluate_pcn_multi_gpu(
     )(device_keys)
 
     # Create pmap'ed inference function
-    def inference_fn(params_obj: GraphParams, sharded_batch: Iterable[jnp.ndarray], randgen_key: jax.Array) -> GraphState:
+    def inference_fn(params_obj: GraphParams, sharded_batch: Dict[str, jnp.ndarray], randgen_key: jax.Array) -> GraphState:
         batch_size_ = next(iter(sharded_batch.values())).shape[0]
         clamps = {}
-        for task_name, task_value in batch.items():
+        for task_name, task_value in sharded_batch.items():
             if task_name in structure.task_map and task_name == "x":
                 node_name = structure.task_map[task_name]
                 clamps[node_name] = task_value
@@ -353,7 +355,8 @@ def evaluate_pcn_multi_gpu(
 
     pmap_inference = jax.pmap(inference_fn, axis_name="devices")
 
-    total_loss = 0.0
+    batch_energies = []  # energy of the network
+    batch_output_loss = []  # loss of the output node
     total_correct = 0
     total_samples = 0
 
@@ -378,10 +381,11 @@ def evaluate_pcn_multi_gpu(
         final_states = pmap_inference(params, batch_sharded, batch_key_for_step)
 
         # Gather results from all devices
-        # (We need to reshape back from (n_devices, batch_per_device, ...) to (batch_size, ...))
+        # final_states is a GraphState with .nodes dict, arrays have shape (n_devices, batch_per_device, ...)
         if "y" in structure.task_map:
             y_node = structure.task_map["y"]
-            predictions = final_states[y_node].z_latent  # (n_devices, batch_per_device, *shape)
+            # Access via .nodes attribute (GraphState is a NamedTuple, not a dict)
+            predictions = final_states.nodes[y_node].z_latent  # (n_devices, batch_per_device, *shape)
             predictions = predictions.reshape(batch_size, -1)
             targets = batch["y"]
 

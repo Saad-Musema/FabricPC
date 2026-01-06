@@ -2,7 +2,7 @@
 
 ## Problem Summary
 
-When running multi-GPU training on a dual GPU system, the loss is reported in **billions** while single-GPU training reports loss of only a **few hundred**.
+When running multi-GPU training on a dual GPU system, the energy is reported in **billions** while single-GPU training reports energy of only a **few hundred**.
 The Multi-GPU code diverged early in development and is missing local learning dynamics and uses a deprecated initialization config.
 
 ## Root Cause Analysis
@@ -91,7 +91,7 @@ Apply the same fix as above.
 tests/test_multi_gpu.py
 
 1. **Unit test:** Verify `state_init_config` is correctly read from `structure.config`
-2. **Integration test:** Run same model on single-GPU and multi-GPU, compare loss values
+2. **Integration test:** Run same model on single-GPU and multi-GPU, compare energy values
 3. **Regression test:** Ensure existing multi-GPU workflows still function if they were passing config correctly
 
 ### Verification
