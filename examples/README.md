@@ -6,7 +6,7 @@ This directory contains example scripts demonstrating FabricPC.
 
 ```bash
 # Install FabricPC in editable mode (from project root)
-pip install -e ".[dev,torch,viz]"
+pip install -e ".[dev,tfds,viz]"
 
 # Run MNIST demo
 python examples/mnist_demo.py
@@ -31,20 +31,35 @@ python examples/mnist_demo.py
 
 **Expected Results**:
 ```
-Epoch 1/20, Loss: 0.4529
-Epoch 2/20, Loss: 0.1903
-Epoch 3/20, Loss: 0.0757
-Epoch 4/20, Loss: 0.0482
+Epoch 1/20, energy: 0.7254
+Epoch 2/20, energy: 0.1355
+Epoch 3/20, energy: 0.0688
+Epoch 4/20, energy: 0.0420
 ...
-Epoch 18/20, Loss: 0.0052
-Epoch 19/20, Loss: 0.0047
-Epoch 20/20, Loss: 0.0043
-Avg Training time: 2.05 seconds per epoch
+Epoch 18/20, energy: 0.0029
+Epoch 19/20, energy: 0.0027
+Epoch 20/20, energy: 0.0026
+Avg Training time: 1.37 seconds per epoch
 
 Evaluating...
-Test Accuracy: 97.93%
-Test Loss: 0.0349
+Test Accuracy: 98.05%
 ```
+
+### `PC_backprop_compare.py`
+**Description**: Compare accuracy and training time of Predictive Coding vs Backpropagation on MNIST.
+PC:       97.99 +/- 0.03%  (mean +/- SE, SD=0.11%)
+Backprop: 97.81 +/- 0.05%  (mean +/- SE, SD=0.23%)
+
+--- Paired t-test ---
+Mean difference (PC - BP): +0.18%
+t-statistic: 3.6474
+p-value: 0.0017, N = 20
+Significant at p<0.05: YES
+--- Training Time per Epoch ---
+PC:       1.211 +/- 0.011s
+Backprop: 0.761 +/- 0.008s
+Ratio:    PC is 1.59x backprop time
+
 
 ### transformer_demo.py
 
@@ -99,22 +114,10 @@ PC inference phase is very sensitive to weight initialization and hyperparameter
 
 ## Notes
 
-### Data Loading Warning
-
-You may see warnings about `os.fork()` when using PyTorch DataLoader:
-```
-RuntimeWarning: os.fork() was called. os.fork() is incompatible with multithreaded code,
-and JAX is multithreaded, so this will likely lead to a deadlock.
-```
-
-This is harmless for now but will be addressed in future versions by switching to JAX-native data pipelines.
-
 ### Performance
 
 First batch will be slow due to JIT compilation (~5-10 seconds). Subsequent batches are fast.
 
 ## Troubleshooting
 **Import Error**: Make sure FabricPC is installed:
-```bash
-pip install -e ".[dev,torch,viz]"
-```
+See quickstart section above.

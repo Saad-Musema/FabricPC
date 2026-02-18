@@ -14,6 +14,7 @@ from fabricpc.core.types import GraphParams, GraphState, GraphStructure
 from fabricpc.core.inference import run_inference
 from fabricpc.graph.graph_net import compute_local_weight_gradients
 
+
 def get_graph_param_gradient(
     params: GraphParams,
     batch: Dict[str, jnp.ndarray],
@@ -51,8 +52,12 @@ def get_graph_param_gradient(
 
     # Initialize state using graph config
     init_state = initialize_graph_state(
-        structure, batch_size, rng_key, clamps=clamps,
-        state_init_config=structure.config["graph_state_initializer"], params=params
+        structure,
+        batch_size,
+        rng_key,
+        clamps=clamps,
+        state_init_config=structure.config["graph_state_initializer"],
+        params=params,
     )
 
     # Run inference to convergence
@@ -61,8 +66,13 @@ def get_graph_param_gradient(
     )
 
     # Compute energy (ignore source nodes)
-    energy = sum([sum(final_state.nodes[node_name].energy) for node_name in structure.nodes if
-                  structure.nodes[node_name].in_degree > 0])
+    energy = sum(
+        [
+            sum(final_state.nodes[node_name].energy)
+            for node_name in structure.nodes
+            if structure.nodes[node_name].in_degree > 0
+        ]
+    )
 
     # Compute LOCAL gradients for each node
     grads = compute_local_weight_gradients(params, final_state, structure)
@@ -114,6 +124,7 @@ def train_step(
 
     return params, opt_state, energy, final_state
 
+
 def train_pcn(
     params: GraphParams,
     structure: GraphStructure,
@@ -121,8 +132,8 @@ def train_pcn(
     config: dict,
     rng_key: jax.Array,
     verbose: bool = True,
-    epoch_callback = None,
-    iter_callback = None,
+    epoch_callback=None,
+    iter_callback=None,
 ) -> Tuple[GraphParams, List[Any], List[Any]]:
     """
     Main training loop for predictive coding network with local learning.
@@ -209,20 +220,30 @@ def train_pcn(
                 raise ValueError(f"unsupported batch format: {type(batch_data)}")
 
             # Training step with unique rng_key for this batch
-            params, opt_state, energy, _ = jit_train_step(params, opt_state, batch, batch_keys[batch_idx])
+            params, opt_state, energy, _ = jit_train_step(
+                params, opt_state, batch, batch_keys[batch_idx]
+            )
 
             if iter_callback is not None:
                 batch_energies.append(iter_callback(epoch_idx, batch_idx, energy))
             else:
-                batch_energies.append(float(energy) / next(iter(batch.values())).shape[0])  # nornalize by batch size
+                batch_energies.append(
+                    float(energy) / next(iter(batch.values())).shape[0]
+                )  # normalize by batch size
 
         iter_results.append(batch_energies)
 
         # Compute average energy for epoch
-        avg_energy = sum(batch_energies) / len(batch_energies) if batch_energies else 0.0
+        avg_energy = (
+            sum(batch_energies) / len(batch_energies) if batch_energies else 0.0
+        )
 
         # Epoch callback
-        epoch_results.append(epoch_callback(epoch_idx, params, structure, config, rng_key) if epoch_callback else None)
+        epoch_results.append(
+            epoch_callback(epoch_idx, params, structure, config, rng_key)
+            if epoch_callback
+            else None
+        )
 
         if verbose:
             print(f"Epoch {epoch_idx + 1}/{num_epochs}, energy: {avg_energy:.4f}")
@@ -262,35 +283,38 @@ def eval_step(
         x_node = structure.task_map["x"]
         clamps[x_node] = batch["x"]
 
-    # Initialize and run inference
+    # Initialize graph latent states
     state = initialize_graph_state(
-        structure, batch_size, rng_key, clamps=clamps,
-        state_init_config=structure.config["graph_state_initializer"], params=params
+        structure,
+        batch_size,
+        rng_key,
+        clamps=clamps,
+        state_init_config=structure.config["graph_state_initializer"],
+        params=params,
     )
+
+    # Run inference steps
+    # TODO - can skip inference in evaluation mode (no labels) if 1. initialization method is feed-forward AND 2. the graph has no cycles.
     final_state = run_inference(
         params, state, clamps, structure, infer_steps, eta_infer
     )
 
-    # Compute energy from all non-source nodes
-    energy = jnp.array(0.0)
+    # Compute total network energy
+    total_energy = jnp.array(0.0)
     for node_name in structure.nodes:
-        if structure.nodes[node_name].in_degree > 0:
-            energy = energy + jnp.sum(final_state.nodes[node_name].energy)
+        total_energy = total_energy + jnp.sum(
+            final_state.nodes[node_name].energy
+        )  # sum energy over the batch dimension and accumulate to total_energy
 
-    # Add prediction error for label node
-    if "y" in structure.task_map:
-        y_node = structure.task_map["y"]
-        node_state = final_state.nodes[y_node]
-        error = node_state.z_latent - batch["y"]
-        energy = energy + jnp.sum(error ** 2)
+    # In evaluation mode, the output node won't be clamped to a label and doesn't contribute to energy. Energy is only from internal nodes. Use a proper metric to assess task performance, not energy.
 
-    avg_energy = energy / batch_size
+    avg_energy = total_energy / batch_size
 
     # Compute accuracy
     correct = 0
     if "y" in structure.task_map:
         y_node = structure.task_map["y"]
-        predictions = final_state.nodes[y_node].z_latent
+        predictions = final_state.nodes[y_node].z_mu
         pred_labels = jnp.argmax(predictions, axis=1)
         true_labels = jnp.argmax(batch["y"], axis=1)
         correct = jnp.sum(pred_labels == true_labels)
@@ -319,6 +343,8 @@ def evaluate_pcn(
 
     Returns:
         Dictionary of evaluation metrics {"energy": avg_energy, "accuracy": accuracy}
+        Note: energy is not a meaningful metric for evaluation, but we include internal node energy for completeness. Focus on accuracy or other task-specific metrics.
+        Note: Energy will be zero in evaluation mode for graphs that are feed-forward in topology (no cycles) and use feed-forward initialization.
     """
     infer_steps = config.get("infer_steps", 20)
     eta_infer = config.get("eta_infer", 0.1)
@@ -351,7 +377,9 @@ def evaluate_pcn(
             raise ValueError(f"Unsupported batch format: {type(batch_data)}")
 
         # Run JIT-compiled eval step
-        batch_energy, correct, batch_size = jit_eval_step(params, batch, batch_keys[batch_idx])
+        batch_energy, correct, batch_size = jit_eval_step(
+            params, batch, batch_keys[batch_idx]
+        )
 
         total_energy += float(batch_energy) * int(batch_size)
         total_correct += int(correct)

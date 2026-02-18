@@ -17,10 +17,10 @@ from jax import nn
 
 from fabricpc.core.registry import Registry, RegistrationError, validate_config_schema
 
-
 # =============================================================================
 # Activation Base Class
 # =============================================================================
+
 
 class ActivationBase(ABC):
     """
@@ -100,8 +100,10 @@ class ActivationBase(ABC):
 # Activation Registry
 # =============================================================================
 
+
 class ActivationRegistrationError(RegistrationError):
     """Raised when activation registration fails."""
+
     pass
 
 
@@ -113,7 +115,7 @@ _activation_registry = Registry(
     required_methods=["forward", "derivative"],
     attr_validators={
         "CONFIG_SCHEMA": validate_config_schema,
-    }
+    },
 )
 _activation_registry.set_error_class(ActivationRegistrationError)
 
@@ -177,8 +179,7 @@ def clear_activation_registry() -> None:
 
 
 def validate_activation_config(
-    activation_class: Type[ActivationBase],
-    config: Dict[str, Any]
+    activation_class: Type[ActivationBase], config: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
     Validate and apply defaults from activation's CONFIG_SCHEMA.
@@ -195,7 +196,7 @@ def validate_activation_config(
     """
     from fabricpc.core.config import validate_config
 
-    schema = getattr(activation_class, 'CONFIG_SCHEMA', None)
+    schema = getattr(activation_class, "CONFIG_SCHEMA", None)
     activation_type = config.get("type", "unknown") if config else "unknown"
     return validate_config(schema, config, context=f"activation '{activation_type}'")
 
@@ -217,6 +218,7 @@ def discover_external_activations() -> None:
 # =============================================================================
 # Built-in Activations
 # =============================================================================
+
 
 @register_activation("identity")
 class IdentityActivation(ActivationBase):
@@ -293,7 +295,7 @@ class LeakyReLUActivation(ActivationBase):
         "alpha": {
             "type": (int, float),
             "default": 0.01,
-            "description": "Negative slope for x < 0"
+            "description": "Negative slope for x < 0",
         }
     }
 
@@ -306,6 +308,7 @@ class LeakyReLUActivation(ActivationBase):
     def derivative(x: jnp.ndarray, config: Dict[str, Any] = None) -> jnp.ndarray:
         alpha = config.get("alpha", 0.01) if config else 0.01
         return jnp.where(x > 0, 1.0, alpha)
+
 
 @register_activation("gelu")
 class GeluActivation(ActivationBase):
@@ -321,10 +324,15 @@ class GeluActivation(ActivationBase):
     def derivative(x: jnp.ndarray, config: Dict[str, Any] = None) -> jnp.ndarray:
         # Gelu(x): = x * normal_CDF
         sqrt_2_over_pi = jnp.sqrt(2 / jnp.pi)
-        x_cubed = x ** 3
-        apx_norm_cdf = 0.5 * (1 + jnp.tanh(sqrt_2_over_pi * (x + 0.044715 * x_cubed)))  # Approximation of normal CDF via tanh
-        norm_cdf_prime = (0.5 * sqrt_2_over_pi * (1 + 3 * 0.044715 * x ** 2)) * (1 - jnp.tanh(sqrt_2_over_pi * (x + 0.044715 * x_cubed)) ** 2)
+        x_cubed = x**3
+        apx_norm_cdf = 0.5 * (
+            1 + jnp.tanh(sqrt_2_over_pi * (x + 0.044715 * x_cubed))
+        )  # Approximation of normal CDF via tanh
+        norm_cdf_prime = (0.5 * sqrt_2_over_pi * (1 + 3 * 0.044715 * x**2)) * (
+            1 - jnp.tanh(sqrt_2_over_pi * (x + 0.044715 * x_cubed)) ** 2
+        )
         return apx_norm_cdf + x * norm_cdf_prime
+
 
 @register_activation("softmax")
 class SoftmaxActivation(ActivationBase):
@@ -334,13 +342,18 @@ class SoftmaxActivation(ActivationBase):
 
     @staticmethod
     def forward(x: jnp.ndarray, config: Dict[str, Any] = None) -> jnp.ndarray:
-        exp_x = jnp.exp(x - jnp.max(x, axis=-1, keepdims=True))  # relative to max value for numerical stability
+        exp_x = jnp.exp(
+            x - jnp.max(x, axis=-1, keepdims=True)
+        )  # relative to max value for numerical stability
         return exp_x / jnp.sum(exp_x, axis=-1, keepdims=True)
 
     @staticmethod
     def derivative(x: jnp.ndarray, config: Dict[str, Any] = None) -> jnp.ndarray:
         s = SoftmaxActivation.forward(x)
-        return s * (1 - s)  # Note: This is a simplification; full Jacobian is more complex
+        return s * (
+            1 - s
+        )  # Note: This is a simplification; full Jacobian is more complex
+
 
 @register_activation("hard_tanh")
 class HardTanhActivation(ActivationBase):
@@ -356,13 +369,13 @@ class HardTanhActivation(ActivationBase):
         "min_val": {
             "type": (int, float),
             "default": -1.0,
-            "description": "Minimum output value"
+            "description": "Minimum output value",
         },
         "max_val": {
             "type": (int, float),
             "default": 1.0,
-            "description": "Maximum output value"
-        }
+            "description": "Maximum output value",
+        },
     }
 
     @staticmethod
@@ -381,6 +394,7 @@ class HardTanhActivation(ActivationBase):
 # =============================================================================
 # Convenience Functions
 # =============================================================================
+
 
 def get_activation(config: Dict[str, Any]) -> Tuple[Callable, Callable]:
     """

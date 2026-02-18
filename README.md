@@ -18,7 +18,7 @@ PC performs bilevel optimization: an inner loop infers latent activations by min
 - Potential novel plasticity rules for continual learning
 
 There are various flavors of PC. FabricPC provides a graph-based implementation that focuses on principles:
-- Local learning rules
+- Local (Hebbian) learning rules
 - Parallel processing of nodes
 - Expectation-maximization style inference.
 - Modularity of components
@@ -29,7 +29,13 @@ There are various flavors of PC. FabricPC provides a graph-based implementation 
 ## Quick Start
 ```bash
 # Install in editable mode (recommended for development, and running examples)
-pip install -e ".[dev,torch,viz]"
+pip install -e ".[dev,tfds,viz]"
+
+# Install pre-commit hooks for code quality
+pre-commit install     
+
+# Start the Aim visualization server (optional)
+aim up
 
 # Run an example
 python examples/mnist_demo.py
@@ -38,7 +44,7 @@ python examples/mnist_demo.py
 ## Features
 - Modular node and wire abstractions for flexible model construction
 - Inherently supports arbitrary architectures: feedforward, recurrent, skip connections, etc.
-- Support for various node types: Linear, Conv1D/2D/3D (planned), Transfomers (planned)
+- Support for various node types: Linear, Conv1D/2D/3D (planned), Transfomers (in progress)
 - Local automatic differentiation for efficient inference and learning
 - JAX backend for GPU acceleration and scalability
 
@@ -47,13 +53,15 @@ Contributions are welcome! Please open issues or pull requests on the GitHub rep
 - Develop on a branch using convention "feature/your_feature_name"
 - All demos must match baseline results and test suites must pass before merging new code.
 - Write unit tests and docstrings for new code
-- Follow PEP8 style guidelines
+- Use pre-commit hooks for PEP8 style and code quality (run `pre-commit install` once after cloning!)
+- Follow the rebase instructions in `docs/rebasing_feature_branch.md` before merging to main.
 
 This is a research-first project.
 - APIs may change frequently until v1.0 release.
 - Any breaking changes are documented in the changelog.
 
-## License: private until officially released. Please do not distribute.
+## License:
+Private until officially released. Please do not distribute.
 
 ## Extending FabricPC
 

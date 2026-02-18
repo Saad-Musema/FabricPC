@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fabricpc"
-version = "0.2.6"
+version = "0.2.7"
 description = "A flexible, performant predictive coding library using JAX"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -38,19 +38,34 @@ dependencies = [
 dev = [
     "pytest>=7.0.0",
     "hypothesis>=6.0.0",
-    "black>=23.0.0",
+    "black[colorama]==26.1.0",
     "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
 ]
-torch = [
-    "torch>=2.0.0",
-    "torchvision>=0.15.0",
+tfds = [
+    "tensorflow-datasets>=4.9.0",
+    "tensorflow>=2.15.0",
 ]
 viz = [
     "plotly>=5.0.0",
     "kaleido>=0.2.1",
     "pandas>=2.0.0",
+    "aim>=3.0.0",
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["fabricpc*"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310", "py311", "py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.git
+    | \.venv
+    | build
+    | dist
+)/
+'''
