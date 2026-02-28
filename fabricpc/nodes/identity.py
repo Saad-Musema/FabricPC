@@ -1,5 +1,144 @@
-# TODO implement identity node
 """
-IdentityNode just passes through its input as output, with no parameters and no error.
-This can be useful for things like input nodes or auxiliary nodes that don't need to learn anything, but just serve as conduits for data.
+Identity node implementation for JAX predictive coding networks.
+
+The IdentityNode passes input through unchanged with no transformation, no
+activation and no learnable parameters. This is useful for input nodes or
+auxiliary nodes that serve as conduits for data without learning.
+
+When multiple inputs are connected, they are summed together.
 """
+
+from typing import Dict, Any, Tuple
+import jax
+import jax.numpy as jnp
+
+from fabricpc.nodes.base import NodeBase, SlotSpec
+from fabricpc.core.types import NodeParams, NodeState, NodeInfo
+from fabricpc.core.activations import IdentityActivation
+from fabricpc.core.energy import GaussianEnergy
+from fabricpc.core.initializers import NormalInitializer
+
+
+class IdentityNode(NodeBase):
+    """
+    Identity node: passes input through unchanged.
+
+    This node type:
+    - Has a single multi-input slot named "in"
+    - Sums all inputs (if multiple) and passes through as z_mu
+    - Has no learnable parameters (no weights, no biases)
+    - Useful for input nodes or passthrough connections
+    """
+
+    DEFAULT_ACTIVATION = IdentityActivation
+    DEFAULT_ENERGY = GaussianEnergy
+    DEFAULT_LATENT_INIT = NormalInitializer
+
+    def __init__(
+        self,
+        shape,
+        name,
+        activation=None,
+        energy=None,
+        latent_init=None,
+    ):
+        """
+        Args:
+            shape: Output shape tuple (excluding batch dimension)
+            name: Node name
+            activation: ActivationBase instance (default: IdentityActivation)
+            energy: EnergyFunctional instance (default: GaussianEnergy)
+            latent_init: InitializerBase instance for latent states
+        """
+        super().__init__(
+            shape=shape,
+            name=name,
+            activation=activation,
+            energy=energy,
+            latent_init=latent_init,
+        )
+
+    @staticmethod
+    def get_slots() -> Dict[str, SlotSpec]:
+        """
+        Identity nodes have a single multi-input slot.
+
+        Returns:
+            Dictionary with one slot "in" that accepts multiple inputs
+        """
+        return {"in": SlotSpec(name="in", is_multi_input=True)}
+
+    @staticmethod
+    def initialize_params(
+        key: jax.Array,
+        node_shape: Tuple[int, ...],
+        input_shapes: Dict[str, Tuple[int, ...]],
+        config: Dict[str, Any],
+    ) -> NodeParams:
+        """
+        Initialize parameters for identity node (none needed).
+
+        Args:
+            key: JAX random key (unused)
+            node_shape: Output shape of this node (unused)
+            input_shapes: Dictionary with edge keys to source shapes (unused)
+            config: Node configuration (unused)
+
+        Returns:
+            NodeParams with empty weights and biases
+        """
+        return NodeParams(weights={}, biases={})
+
+    @staticmethod
+    def forward(
+        params: NodeParams,
+        inputs: Dict[str, jnp.ndarray],
+        state: NodeState,
+        node_info: NodeInfo,
+    ) -> Tuple[jax.Array, NodeState]:
+        """
+        Identity forward pass: sum inputs and pass through.
+
+        For source nodes (no inputs), z_mu equals z_latent.
+        For nodes with inputs, z_mu is the sum of all inputs.
+
+        Args:
+            params: Node parameters (empty for identity node)
+            inputs: Dictionary mapping edge keys to input tensors
+            state: Current node state
+            node_info: NodeInfo object
+
+        Returns:
+            Tuple of (total_energy, updated NodeState)
+        """
+        # Sum all inputs
+        z_mu = None
+        for edge_key, x in inputs.items():
+            if z_mu is None:
+                z_mu = x
+            else:
+                z_mu = z_mu + x
+
+        # Handle source nodes with no inputs
+        if z_mu is None:
+            z_mu = state.z_latent
+
+        # For identity node, pre_activation equals z_mu (no activation transform)
+        pre_activation = z_mu
+
+        # Compute prediction error
+        error = state.z_latent - z_mu
+
+        # Update node state
+        state = state._replace(
+            pre_activation=pre_activation,
+            z_mu=z_mu,
+            error=error,
+        )
+
+        # Compute energy using the energy functional
+        node_class = node_info.node_class
+        state = node_class.energy_functional(state, node_info)
+
+        total_energy = jnp.sum(state.energy)
+        return total_energy, state
